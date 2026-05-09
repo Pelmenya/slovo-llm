@@ -1,0 +1,72 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-laguna
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      # Слушаем на всех интерфейсах внутри контейнера
+      - OLLAMA_HOST=0.0.0.0:11434
+
+      # Сколько моделей одновременно держать в памяти
+      - OLLAMA_MAX_LOADED_MODELS=1
+
+      # Параллельные запросы к одной модели.
+      # =1: один пользователь, агентские сессии. Каждый parallel-слот ведёт
+      # СВОЙ KV-cache, на 32K контексте каждый слот ест ~2.5 GiB VRAM.
+      # На single-user конфигурации значения >1 только удваивают KV и
+      # выкидывают слои на CPU. См. CLAUDE.md для бенчмарков.
+      - OLLAMA_NUM_PARALLEL=1
+
+      # Держим модель в памяти после последнего запроса (важно для агентских сессий)
+      - OLLAMA_KEEP_ALIVE=24h
+
+      # KV-cache q8_0 — лучший баланс. Тестировали q4_0 (то же 25/41 слоёв,
+      # +0.2 tok/s в шуме) и f16 (потеряли 1 слой, скорость не выросла).
+      # Подробная таблица бенчмарков — в CLAUDE.md.
+      - OLLAMA_KV_CACHE_TYPE=q8_0
+
+      # Flash Attention — критично для скорости на RTX 40xx
+      - OLLAMA_FLASH_ATTENTION=1
+
+      # Дефолтный контекст. Laguna умеет 128K, но реально 32K — оптимум для твоего железа
+      - OLLAMA_CONTEXT_LENGTH=32768
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          # Лимит RAM для контейнера. На машине 64 GB,
+          # оставляем системе + slovo dev-стеку ~24 GB
+          memory: 40G
+
+    # Shared memory для CUDA workloads
+    shm_size: '2gb'
+
+    restart: unless-stopped
+
+    # Healthcheck через сам ollama CLI (curl в образе нет)
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    networks:
+      - slovo-llm-net
+
+volumes:
+  ollama_data:
+    name: slovo-llm_ollama_data
+
+networks:
+  slovo-llm-net:
+    name: slovo-llm-net
+    driver: bridge
