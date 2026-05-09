@@ -10,3 +10,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# AI Assistant state
+.claude/
+.poolside/

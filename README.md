@@ -44,6 +44,8 @@ docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
 slovo-llm/
 ├── .env                  # COMPOSE_PROJECT_NAME=slovo-llm
 ├── docker-compose.yml    # Ollama сервис
+├── gpu-monitor.sh        # Real-time GPU+container monitoring (bash)
+├── gpu-monitor.ps1       # Real-time GPU+container monitoring (PowerShell)
 └── README.md             # этот файл
 ```
 
@@ -135,6 +137,16 @@ nvidia-smi -l 1
 
 ```bash
 docker stats ollama-laguna
+```
+
+Для удобного live-мониторинга GPU + container memory:
+
+```bash
+# bash
+./gpu-monitor.sh ollama-laguna
+
+# PowerShell  
+.\gpu-monitor.ps1
 ```
 
 Смотрим:
