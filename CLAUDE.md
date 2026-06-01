@@ -3,6 +3,56 @@
 Контекст и эмпирика по этому проекту, чтобы будущие сессии не разбирались с нуля.
 README остаётся официальной документацией; здесь — то, что узнали в процессе работы.
 
+## Co-agents coordination (Layer 1)
+
+Ты — агент **slovo-llm-runtime**. Параллельно в смежных репах могут идти другие Claude Code сессии.
+
+**Shared board:** `C:\Users\Diamond\.claude\AGENT-STATUS.md` — единая точка координации.
+**Setup doc:** `C:\Users\Diamond\Desktop\multi-agent-setup\multi-agent-setup.md`.
+
+### Sibling agents
+
+| Агент | Репо | Точки касания с slovo-llm-runtime |
+|---|---|---|
+| **slovo-backend** | `slovo/` | основной потребитель Ollama API на `localhost:11434` (через абстракцию `libs/llm`); A/B-сравнение laguna vs Claude/OpenAI |
+
+### Protocol
+
+**Перед задачей:**
+1. Прочитать `~/.claude/AGENT-STATUS.md`
+2. Если slovo-backend сейчас гоняет тяжёлый bench/extraction (water-analysis ETL, vision-catalog) и ты собираешься рестартить `ollama-laguna` / менять модель / KV-cache / NUM_PARALLEL → **спросить у пользователя**, не запускаться (порвёшь живые запросы)
+3. Добавить строку про себя в `## Active` (Agent / Repo / Started / Intent / Touching / ETA / Notes)
+
+**Во время работы:** обновлять intent при milestone'ах.
+
+**После задачи:**
+- Перенести строку из `## Active` в `## Completed`
+- Если менял модель / quantization / контекст / KV-cache / API surface (новый endpoint Ollama, изменение `KEEP_ALIVE`, переезд на llama.cpp) → handoff `slovo-llm-runtime → slovo-backend` в `## Recent handoffs` с numbers (tok/s, VRAM, latency) и breaking-change'ами для prompts
+
+**User (Дмитрий) = mediator on conflicts. Auto-merge cross-repo запрещён.**
+
+## Субагенты (Code Review + специалисты)
+
+В `.claude/agents/` установлены 4 субагента из [wshobson/agents](https://github.com/wshobson/agents) под профиль репы (Docker + GPU + Ollama tuning). **При вызове Agent tool используй `subagent_type` из таблицы ниже, а не `general-purpose`.**
+
+| Агент | Когда использовать | subagent_type |
+|---|---|---|
+| **debugger** | Crash контейнера, GPU не пробрасывается, Ollama unhealthy, странности с layer offload | `debugger` |
+| **performance-engineer** | Бенчи tok/s, prompt_eval rate, выбор quantization (q4_0 / q8_0 / f16), NUM_PARALLEL, KV-cache tuning | `performance-engineer` |
+| **deployment-engineer** | `docker-compose.yml`, GPU passthrough через `deploy.resources.devices`, volumes, env Ollama (`KEEP_ALIVE`, `OLLAMA_FLASH_ATTENTION`), Docker Desktop апгрейды | `deployment-engineer` |
+| **observability-engineer** | nvidia-smi мониторинг, GPU/VRAM/power logging, structured логи Ollama, алёрты по утилизации | `observability-engineer` |
+| **docs-reviewer** | Дрейф документации: CLAUDE.md бенчмарки vs `stress-test-output.md`, runtime конфиг (NUM_PARALLEL, KV-cache) vs `docker-compose.yml`, Ollama version, история инфры на противоречия с current state | `docs-reviewer` |
+
+| Команда пользователя | subagent_type |
+|---|---|
+| «не работает / зависло / OOM» | `debugger` |
+| «прогнать бенч» / «оптимизировать модель» | `performance-engineer` |
+| «настроить docker-compose» / «GPU не виден» | `deployment-engineer` |
+| «настрой мониторинг» / «алерты на VRAM» | `observability-engineer` |
+| «проверь документацию» / «бенчи актуальны?» | `docs-reviewer` |
+
+Все агенты — модель `opus`. Малая репа, без pre-PR ритуала — вызывать по ситуации. **После каждого нового stress-test прогона** / изменения `docker-compose.yml` — стоит звать `docs-reviewer`, потому что бенчмарки и runtime-конфиг в CLAUDE.md дрейфуют первыми.
+
 ## Железо и конфиг (резюме)
 
 - RTX 4070 Ti SUPER 16 GB VRAM, i9-11900K, 64 GB RAM, Windows 10 Pro + Docker Desktop / WSL2
@@ -125,3 +175,23 @@ docker exec ollama-laguna ollama --version
 - `docker-compose.yml` — текущий рабочий конфиг (image: latest, GPU через deploy.resources, env-переменные Ollama)
 - `stress-test.ps1` — нагрузочный тест, измеряет prompt_eval/gen rate, мониторит GPU (через `-InFile`, не `-Body`)
 - `stress-test-output.md` — последний сэмпл вывода модели, для оценки качества
+
+## 👤 Стиль Димы — ПРИКЛАДНИК (как со мной работать)
+
+Дима = практик/прикладник, **НЕ теоретик**. Как работать:
+- **НЕ разводить полемику** («а давай обсудим…») — предлагать и **СРАЗУ делать** дешёвую обратимую пробу. Длинные деференсы по обратимым решениям его раздражают и тормозят.
+- **«Нет компетенции» = не стоп, а повод итерировать быстрее** (петля гипотеза→дешёвый тест→урок; понимание приходит ИЗ проб). Breadth-first эмпирика > лобовой экспертный заход.
+- **Упёрся в стену → откат → дальше.** Стена = информация, не провал. Берём обратимые ставки — потому откат дёшев.
+- **Смотреть на ВСЮ систему** (правила/constraints/побочные механики/среду), не только узкую задачу — здесь его сила, часто решает то что другие не увидели.
+- **Failures = сигналы** сужающие поиск, хороший оптимизм (opportunities не risks), **Дима = ЛПР** (decisions actively, не просить approval на каждый шаг).
+
+## 📚 Подпроект school-llm (перенос из ML/C_school_llm, 01.06.2026)
+
+**РЕАЛЬНЫЙ бизнес-проект** (LLM-инференс школьных вопросов, рус.). Перенесён сюда из контеста Yandex ML Cup C. Работаем здесь.
+- `school-llm/RESULTS_HISTORY.md` — вся история: версии/баллы (финал C=73), что работает/нет, инсайты, диагноз почему застряли.
+- `school-llm/AUTONOMOUS_PLAN.md` — план 73→85+ (Гордеева взяла 85.59 с того же 73).
+- `school-llm/{data,anchors,validation,rag_index_gold}/` — hold-out+gold, калибровочные якоря, код инференса, RAG.
+
+**Судья = БЕСПЛАТНАЯ модель по API:** **Laguna (Poolside)** — локально `ollama-laguna` localhost:11434 ($0) ИЛИ Poolside API (`POOLSIDE_API_KEY`). **Кросс-семейство к Qwen-солверам = честно.** ⚠️ laguna шарится с slovo-backend — перед тяжёлым прогоном проверить `~/.claude/AGENT-STATUS.md`.
+
+**Веса (6GB) НЕ перенесены** — референс в `ML/C_school_llm/weights_*` (копировать/симлинкать когда нужно).
