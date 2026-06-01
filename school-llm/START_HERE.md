@@ -9,13 +9,13 @@
 ## 🎯 Цель
 Пробить **73 → 85+**. Рычаг = **knowledge-gap**: Qwen3-8B фабрикует русскую школу (литература/русский), math/наука ок. Судья correctness-sensitive → нужна модель/RAG что НЕ фабрикует факты.
 
-## ⚙️ Старт сессии (чеклист)
-1. **Поднять судью (Laguna, бесплатный, кросс-семейство к Qwen):**
-   ```
-   cd C:\Users\Diamond\Desktop\slovo-llm && docker compose up -d
-   # проверить: docker ps | grep ollama-laguna ; curl localhost:11434/api/tags
-   ```
-   ⚠️ laguna шарится с slovo-backend → перед тяжёлым прогоном глянуть `~/.claude/AGENT-STATUS.md`.
+## ✅ СТАТУС (01.06.2026): судья ВАЛИДЕН, петля за $0 готова
+Судья = **`poolside/laguna-m.1`** cloud API (НЕ локальная ollama — xs.2 пропала из volume, и модели на GPU не держим). Калибровка пройдена (Spearman≈0.9, концы шкалы точны, ловит knowledge-gap). Детали: memory `project_school_llm_judge_setup` + `RESULTS_HISTORY.md` §«Сессия 01.06.2026». Рычаги к 85 ОТЛОЖЕНЫ.
+
+**Как дёрнуть судью (грабли — см. memory):** Poolside `https://inference.poolside.ai/v1`, ключ `POOLSIDE_API_KEY` в `.env`, **только через прокси** `http://host.docker.internal:10810` (РФ-блок), питон В контейнере `ml-cup-b-baseline:local`. Прогон: `docker run --rm -e POOLSIDE_API_KEY=$key -e HTTPS_PROXY=http://host.docker.internal:10810 -v ...\school-llm:/work ml-cup-b-baseline:local python /work/validation/judge_poolside.py --n 60 --workers 16`.
+
+## ⚙️ Старт сессии (чеклист) — устарел, см. СТАТУС выше
+1. ~~Поднять локальную laguna~~ → судья теперь cloud API (выше). ⚠️ перед тяжёлым прогоном глянуть `~/.claude/AGENT-STATUS.md`.
 2. **Веса solver'ов** (для перегенерации якорей) — референс в `C:\Users\Diamond\Desktop\ML\C_school_llm\weights_*` (`weights_8b_awq`=73, `weights_tlite_bnb4bit`=70.3). Копировать/симлинкнуть когда нужно. **НЕ в git** (6GB).
 3. **Docker-only прогон** моделей (не локальный python).
 
