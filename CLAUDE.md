@@ -188,6 +188,7 @@ docker exec ollama-laguna ollama --version
 ## 📚 Подпроект school-llm (перенос из ML/C_school_llm, 01.06.2026)
 
 **РЕАЛЬНЫЙ бизнес-проект** (LLM-инференс школьных вопросов, рус.). Перенесён сюда из контеста Yandex ML Cup C. Работаем здесь.
+- **`school-llm/START_HERE.md` — ЧИТАТЬ ПЕРВЫМ** (точка входа: порядок чтения + старт-чеклист + первые шаги).
 - `school-llm/RESULTS_HISTORY.md` — вся история: версии/баллы (финал C=73), что работает/нет, инсайты, диагноз почему застряли.
 - `school-llm/AUTONOMOUS_PLAN.md` — план 73→85+ (Гордеева взяла 85.59 с того же 73).
 - `school-llm/{data,anchors,validation,rag_index_gold}/` — hold-out+gold, калибровочные якоря, код инференса, RAG.
