@@ -55,7 +55,7 @@ Reward-model, **чувствительна к КОРРЕКТНОСТИ**, кар
 - **T-lite (Qwen2.5-7.6B рус) = 70.3** — знает рус.факты (Хлестаков, морфология) где Qwen3-8B фабрикует, НО Qwen2.5-семья стиль-mismatch с gold → каппится <73.
 - **RAG (genrag) = 66.4** — distribution shift от gold навредил (прокси+eyeball обманули).
 - **Промпты:** markdown=55, answer-first(plain2)=66.2 (убил CoT→сломал math), fewshot=70.5-70.8, nolang=72.97 (English-фикс опровергнут).
-- **spec-decode ЗАКРЫТ** — vLLM 0.11 НЕ поддерживает draft-model; ngram=−15% (вредит bulk-батчу).
+- **spec-decode (draft-model) ЗАКРЫТ** — vLLM 0.11 НЕ поддерживает draft-model; ngram=−15%. **НО ⚠️ Eagle3 ≠ draft-model и vLLM-нативный** (0.8.5+): AngelSlim (Tencent) даёт обученные Eagle3-головы, Qwen3-8B=1.7× near-baseline. **Мы ошибочно похоронили весь spec — Eagle3 = живой путь** (см. AUTONOMOUS_PLAN §4.7: 1.7× → 14B влезает в TL → знания → 85).
 
 ## Ключевые инсайты
 1. **Судья = correctness + gold-style-similarity** (gold вероятно генерён Qwen3-семьёй → Qwen3-8B максимально совпадает → 73).
